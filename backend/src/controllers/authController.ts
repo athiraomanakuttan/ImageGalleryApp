@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { AuthService } from '../services/authService';
+import { MESSAGES, STATUS_CODES } from '../constants/authConstance';
 
 const authService = new AuthService();
 
@@ -7,9 +8,9 @@ export const register = async (req: Request, res: Response) => {
   const { email, phone, password } = req.body;
   try {
     await authService.register(email, phone, password);
-    res.status(201).json({ message: 'User registered' });
+    res.status(STATUS_CODES.CREATED).json({ message: MESSAGES.USER_REGISTERED });
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    res.status(STATUS_CODES.BAD_REQUEST).json({ error: error.message });
   }
 };
 
@@ -22,7 +23,7 @@ export const login = async (req: Request, res: Response) => {
     res.json({ token, user: { _id: user._id.toString(), email: user.email } });
   } catch (error: any) {
     console.error('Login error:', error.message); // Debug log
-    res.status(401).json({ error: error.message });
+    res.status(STATUS_CODES.UNAUTHORIZED).json({ error: error.message });
   }
 };
 
@@ -32,7 +33,7 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
     const result = await authService.requestPasswordReset(email);
     res.json(result);
   } catch (error: any) {
-    res.status(404).json({ error: error.message });
+    res.status(STATUS_CODES.NOT_FOUND).json({ error: error.message });
   }
 };
 
@@ -42,6 +43,6 @@ export const resetPassword = async (req: Request, res: Response) => {
     const result = await authService.resetPassword(email, token, newPassword);
     res.json(result);
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    res.status(STATUS_CODES.BAD_REQUEST).json({ error: error.message });
   }
 };

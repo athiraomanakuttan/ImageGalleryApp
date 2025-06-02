@@ -2,12 +2,13 @@ import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { Image as ImageModel } from '../models/Image';
 import { AuthRequest } from '../types';
+import { STATUS_CODES, MESSAGES, ERROR_MESSAGES } from '../constants/imageConstance';
 
 export const uploadImages = async (req: AuthRequest, res: Response) => {
   try {
     const files = req.files as Express.Multer.File[];
     if (!req.user) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(STATUS_CODES.UNAUTHORIZED).json({ error: ERROR_MESSAGES.UNAUTHORIZED });
     }
     const userId = req.user.id;
     const titles = Array.isArray(req.body.titles) ? req.body.titles : [req.body.titles].filter(Boolean);
@@ -18,31 +19,31 @@ export const uploadImages = async (req: AuthRequest, res: Response) => {
       order: 0,
     }));
     const savedImages = await ImageModel.insertMany(images);
-    res.status(201).json(savedImages);
+    res.status(STATUS_CODES.CREATED).json(savedImages);
   } catch (error) {
     console.error('Error uploading images:', error);
-    res.status(500).json({ error: 'Failed to upload images' });
+    res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({ error: ERROR_MESSAGES.FAILED_TO_UPLOAD });
   }
 };
 
 export const getImages = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(STATUS_CODES.UNAUTHORIZED).json({ error: ERROR_MESSAGES.UNAUTHORIZED });
     }
     const userId = req.user.id;
     const images = await ImageModel.find({ userId }).sort({ order: 1 });
-    res.status(200).json(images);
+    res.status(STATUS_CODES.OK).json(images);
   } catch (error) {
     console.error('Error fetching images:', error);
-    res.status(500).json({ error: 'Failed to fetch images' });
+    res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({ error: ERROR_MESSAGES.FAILED_TO_FETCH });
   }
 };
 
 export const updateImage = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(STATUS_CODES.UNAUTHORIZED).json({ error: ERROR_MESSAGES.UNAUTHORIZED });
     }
     const updateData: { title?: string; url?: string } = { title: req.body.title };
     if (req.file) {
@@ -54,28 +55,28 @@ export const updateImage = async (req: AuthRequest, res: Response) => {
       { new: true }
     );
     if (!image) {
-      return res.status(404).json({ error: 'Image not found or not authorized' });
+      return res.status(STATUS_CODES.NOT_FOUND).json({ error: ERROR_MESSAGES.IMAGE_NOT_FOUND });
     }
-    res.status(200).json(image);
+    res.status(STATUS_CODES.OK).json(image);
   } catch (error) {
     console.error('Error updating image:', error);
-    res.status(500).json({ error: 'Failed to update image' });
+    res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({ error: ERROR_MESSAGES.FAILED_TO_UPDATE });
   }
 };
 
 export const deleteImage = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(STATUS_CODES.UNAUTHORIZED).json({ error: ERROR_MESSAGES.UNAUTHORIZED });
     }
     const image = await ImageModel.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
     if (!image) {
-      return res.status(404).json({ error: 'Image not found or not authorized' });
+      return res.status(STATUS_CODES.NOT_FOUND).json({ error: ERROR_MESSAGES.IMAGE_NOT_FOUND });
     }
-    res.status(200).json({ message: 'Image deleted' });
+    res.status(STATUS_CODES.OK).json({ message: MESSAGES.IMAGE_DELETED });
   } catch (error) {
     console.error('Error deleting image:', error);
-    res.status(500).json({ error: 'Failed to delete image' });
+    res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({ error: ERROR_MESSAGES.FAILED_TO_DELETE });
   }
 };
 
@@ -83,25 +84,25 @@ export const reorderImages = async (req: AuthRequest, res: Response) => {
   console.log('Received reorder request with body:', req.body); // Debug log
   try {
     if (!req.user) {
-      return res.status(401).json({ error: 'Unauthorized: No user found' });
+      return res.status(STATUS_CODES.UNAUTHORIZED).json({ error: ERROR_MESSAGES.UNAUTHORIZED_NO_USER });
     }
     const userId = req.user.id;
     const { images }: { images: { id: string; order: number }[] } = req.body;
 
     if (!Array.isArray(images) || images.length === 0) {
-      return res.status(400).json({ error: 'Images must be a non-empty array' });
+      return res.status(STATUS_CODES.BAD_REQUEST).json({ error: ERROR_MESSAGES.INVALID_IMAGES_ARRAY });
     }
 
     // Validate image IDs
     const imageIds = images.map((img) => img.id);
     if (imageIds.some((id) => !mongoose.Types.ObjectId.isValid(id))) {
-      return res.status(400).json({ error: 'One or more image IDs are invalid' });
+      return res.status(STATUS_CODES.BAD_REQUEST).json({ error: ERROR_MESSAGES.INVALID_IMAGE_IDS });
     }
 
     // Verify all images belong to the user
     const userImages = await ImageModel.find({ _id: { $in: imageIds }, userId });
     if (userImages.length !== imageIds.length) {
-      return res.status(403).json({ error: 'Some images do not belong to the user' });
+      return res.status(STATUS_CODES.FORBIDDEN).json({ error: ERROR_MESSAGES.IMAGES_NOT_USER_OWNED });
     }
 
     // Start a session for atomic updates
@@ -133,12 +134,12 @@ export const reorderImages = async (req: AuthRequest, res: Response) => {
           );
         await Promise.all(remainingUpdates);
       });
-      res.status(200).json({ message: 'Images reordered successfully' });
+      res.status(STATUS_CODES.OK).json({ message: MESSAGES.IMAGES_REORDERED });
     } finally {
       session.endSession();
     }
   } catch (error: any) {
     console.error('Error reordering images:', error);
-    res.status(500).json({ error: `Failed to reorder images: ${error.message}` });
+    res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({ error: `Failed to reorder images: ${error.message}` });
   }
 };
