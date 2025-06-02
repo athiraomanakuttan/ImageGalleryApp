@@ -5,7 +5,10 @@ import DragDropContainer from '../../components/DragDropContainer';
 import { signOut } from 'next-auth/react';
 
 export default function Dashboard() {
+  // Add a state to trigger refreshes
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  
+  // Function to trigger a refresh
   const refreshImages = () => {
     setRefreshTrigger(prev => prev + 1);
   };
