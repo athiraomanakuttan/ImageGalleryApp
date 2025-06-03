@@ -2,13 +2,11 @@ import express from 'express';
 import cors from 'cors';
 import authRoutes from './routes/authRoutes';
 import imageRoutes from './routes/imageRoutes';
+import 'dotenv/config';
 
 const app = express();
 
-const allowedOrigins = [
-  'http://localhost:3000',
-  'https://image-gallery-frontend-e7bfj87ef-sreeharirs-projects.vercel.app'
-];
+const allowedOrigins = process.env.ORIGIN_URI?.split(",") || [];
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -20,6 +18,7 @@ app.use(cors({
   },
   credentials: true
 }));
+
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
